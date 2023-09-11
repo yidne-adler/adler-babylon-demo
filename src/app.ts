@@ -1,6 +1,7 @@
 import "@babylonjs/core/Debug/debugLayer";
 import "@babylonjs/inspector";
 import { Engine, Scene, Vector3, HemisphericLight, SceneLoader, CubeTexture, Mesh, UniversalCamera, AbstractMesh } from "@babylonjs/core";
+import { CustomLoadingScreen } from "./LoadingUI";
 
 class App {
 
@@ -15,70 +16,112 @@ class App {
     private _character: Mesh;
 
     constructor() {
-        this._canvas = this._createCanvas();
+        // create canvas.
+        this._createCanvas();
+
+        // create engine & scene.
         this._engine = new Engine(this._canvas, true);
-        this._scene = new Scene(this._engine);
+
+        // set custom loading screen.
+        const loadingScreen = new CustomLoadingScreen("loading");
+        this._engine.loadingScreen = loadingScreen;
 
         // show loading screen
+        console.log("displaying loading ui");
         this._engine.displayLoadingUI();
+
+        this._scene = new Scene(this._engine);
 
         this._setCamera();
         this._setLight();
 
-        this._loadAssets();
+        // load assets.
+        this._loadAssets().then((done) => {
+            if(done) {
+                // hide the loading screen when assets are done loading.
+                this._engine.hideLoadingUI();
+            }
+        });
 
         this._showInspector();
+
+        // this._camera.minZ = 0;
 
         // run the main render loop
         this._engine.runRenderLoop(() => {
             this._scene.render();
+        })
+
+        
+
+        // Watch for browser/canvas resize events
+        window.addEventListener('resize', () => {
+            this._engine.resize();
         });
     }
     
-    private _createCanvas(): HTMLCanvasElement{
-        var canvas = document.createElement("canvas");
-        canvas.style.width = "100%";
-        canvas.style.height = "100%";
-        canvas.id = "gameCanvas";
-        document.body.appendChild(canvas);
+    private _createCanvas(): HTMLCanvasElement {
 
-        return canvas;
+        //Commented out for development
+        document.documentElement.style["overflow"] = "hidden";
+        document.documentElement.style.overflow = "hidden";
+        document.documentElement.style.width = "100%";
+        document.documentElement.style.height = "100%";
+        document.documentElement.style.margin = "0";
+        document.documentElement.style.padding = "0";
+        document.body.style.overflow = "hidden";
+        document.body.style.width = "100%";
+        document.body.style.height = "100%";
+        document.body.style.margin = "0";
+        document.body.style.padding = "0";
+
+        //create the canvas html element and attach it to the webpage
+        this._canvas = document.createElement("canvas");
+        this._canvas.style.width = "100%";
+        this._canvas.style.height = "100%";
+        this._canvas.id = "canvas";
+        document.body.appendChild(this._canvas);
+
+        return this._canvas;
     }
 
     private _setCamera(): void {
         // selected universal cam because I want to move around the showroom.
         this._camera = new UniversalCamera("camera", new Vector3(0,5,3), this._scene)
         this._camera.attachControl(this._canvas);
-        
     }
 
     private _setLight(): void {
         this._light = new HemisphericLight("light1", new Vector3(0, 1, 0), this._scene);
     }
 
-    private async _loadAssets() {
+    private async _loadAssets() : Promise<boolean> {
 
         // load showroom
         this._showroom = await this._loadShowRoom();
         console.log(this._showroom);
 
         // load character
-        SceneLoader.ImportMeshAsync(null, "./models/", "character.glb", this._scene).then((res) => {
-            this._character = res.meshes[0][0];
-        });
+        this._character = await this._loadCharacter();
 
         // show sky
         var skyTexture = new CubeTexture("./textures/skybox/", this._scene);
         this._scene.createDefaultSkybox(skyTexture, true, 1000);
 
-        this._engine.hideLoadingUI();
+        return true;
     }
 
     private async _loadShowRoom(): Promise<any> {
 
-        const result = await SceneLoader.ImportMeshAsync(null, "./models/atoms/", "classic-room.glb", this._scene);
+        const result = await SceneLoader.ImportMeshAsync("", "./models/atoms/", "classic-room.glb", this._scene);
 
         return result.meshes[0];
+    }
+
+    private async _loadCharacter(): Promise<any> {
+        const res = await SceneLoader.ImportMeshAsync("", "./models/", "character.glb", this._scene);
+
+        return res.meshes[0];
     }
 
     private _showInspector(): void {
