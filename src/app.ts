@@ -1,6 +1,6 @@
 import "@babylonjs/core/Debug/debugLayer";
 import "@babylonjs/inspector";
-import { Engine, Scene, Vector3, HemisphericLight, SceneLoader, CubeTexture, Mesh, UniversalCamera, AbstractMesh } from "@babylonjs/core";
+import { Engine, Scene, Vector3, HemisphericLight, SceneLoader, CubeTexture, Mesh, UniversalCamera } from "@babylonjs/core";
 import { CustomLoadingScreen } from "./LoadingUI";
 
 class App {
@@ -45,14 +45,10 @@ class App {
 
         this._showInspector();
 
-        // this._camera.minZ = 0;
-
         // run the main render loop
         this._engine.runRenderLoop(() => {
             this._scene.render();
         })
-
-        
 
         // Watch for browser/canvas resize events
         window.addEventListener('resize', () => {
@@ -87,7 +83,9 @@ class App {
 
     private _setCamera(): void {
         // selected universal cam because I want to move around the showroom.
-        this._camera = new UniversalCamera("camera", new Vector3(0,5,3), this._scene)
+        this._camera = new UniversalCamera("camera", new Vector3(-1.50,7.0,10), this._scene);
+        this._camera.target = new Vector3(-1.5, 4, 3.6);
+        this._camera.rotation = new Vector3(25/180 * Math.PI, Math.PI, 0);
         this._camera.attachControl(this._canvas);
     }
 
@@ -103,6 +101,7 @@ class App {
 
         // load character
         this._character = await this._loadCharacter();
+        this._character.scaling.setAll(0.5);
 
         // show sky
         var skyTexture = new CubeTexture("./textures/skybox/", this._scene);
