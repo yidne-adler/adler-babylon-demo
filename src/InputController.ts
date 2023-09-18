@@ -14,15 +14,21 @@ export class CharacterInput {
         scene.actionManager.registerAction(
             new ExecuteCodeAction(ActionManager.OnKeyDownTrigger, (evt) => {
                 this.inputMap[evt.sourceEvent.key] = evt.sourceEvent.type == "keydown";
-                this.keydown = true;
             })
         );
 
         scene.actionManager.registerAction(
             new ExecuteCodeAction(ActionManager.OnKeyUpTrigger, (evt) => {
                 this.inputMap[evt.sourceEvent.key] = evt.sourceEvent.type == "keydown";
-                this.keydown = false;
             }),
         );
+
+        scene.onBeforeRenderObservable.add(() => {
+            if (this.inputMap["w"] || this.inputMap["s"] || this.inputMap["a"] || this.inputMap["d"]){
+                this.keydown = true;
+            } else {
+                this.keydown = false;
+            }
+        })
     }
 }

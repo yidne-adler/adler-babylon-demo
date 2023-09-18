@@ -1,6 +1,6 @@
 import "@babylonjs/core/Debug/debugLayer";
 import "@babylonjs/inspector";
-import { Engine, Scene, Vector3, HemisphericLight, SceneLoader, CubeTexture, Mesh, UniversalCamera, ArcRotateCamera, ActionManager, ExecuteCodeAction, AnimationGroup } from "@babylonjs/core";
+import { Engine, Scene, Vector3, HemisphericLight, SceneLoader, CubeTexture, Mesh, UniversalCamera } from "@babylonjs/core";
 import { CustomLoadingScreen } from "./LoadingUI";
 import { CharacterInput } from "./InputController";
 import { Character } from "./CharacterController";
