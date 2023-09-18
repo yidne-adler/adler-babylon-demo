@@ -1,7 +1,9 @@
 import "@babylonjs/core/Debug/debugLayer";
 import "@babylonjs/inspector";
-import { Engine, Scene, Vector3, HemisphericLight, SceneLoader, CubeTexture, Mesh, UniversalCamera } from "@babylonjs/core";
+import { Engine, Scene, Vector3, HemisphericLight, SceneLoader, CubeTexture, Mesh, UniversalCamera, ArcRotateCamera, ActionManager, ExecuteCodeAction, AnimationGroup } from "@babylonjs/core";
 import { CustomLoadingScreen } from "./LoadingUI";
+import { CharacterInput } from "./InputController";
+import { Character } from "./CharacterController";
 
 class App {
 
@@ -13,7 +15,9 @@ class App {
     private _light: HemisphericLight;
 
     private _showroom;
-    private _character: Mesh;
+    private _character: Character;
+    private _characterInput: CharacterInput;
+
 
     constructor() {
         // create canvas.
@@ -27,13 +31,14 @@ class App {
         this._engine.loadingScreen = loadingScreen;
 
         // show loading screen
-        console.log("displaying loading ui");
         this._engine.displayLoadingUI();
 
         this._scene = new Scene(this._engine);
 
         this._setCamera();
         this._setLight();
+        
+        this._characterInput = new CharacterInput(this._scene);
 
         // load assets.
         this._loadAssets().then((done) => {
@@ -95,14 +100,12 @@ class App {
 
     private async _loadAssets() : Promise<boolean> {
 
-        // load showroom
+        // load showroom.
         this._showroom = await this._loadShowRoom();
-        console.log(this._showroom);
 
-        // load character
-        this._character = await this._loadCharacter();
-        this._character.scaling.setAll(0.5);
-
+        // load character.
+        this._loadCharacter();
+  
         // show sky
         var skyTexture = new CubeTexture("./textures/skybox/", this._scene);
         this._scene.createDefaultSkybox(skyTexture, true, 1000);
@@ -113,14 +116,19 @@ class App {
     private async _loadShowRoom(): Promise<any> {
 
         const result = await SceneLoader.ImportMeshAsync("", "./models/atoms/", "classic-room.glb", this._scene);
+        result.meshes[0].checkCollisions = true;
 
         return result.meshes[0];
     }
 
-    private async _loadCharacter(): Promise<any> {
+    private async _loadCharacter() {
+
         const res = await SceneLoader.ImportMeshAsync("", "./models/", "character.glb", this._scene);
 
-        return res.meshes[0];
+        const avatar: Mesh = res.meshes[0] as Mesh;
+
+        this._character = new Character(this._scene, this._camera, avatar, 
+            this._scene.getAnimationGroupByName("Walk"), this._characterInput);
     }
 
     private _showInspector(): void {
