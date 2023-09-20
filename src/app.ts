@@ -1,20 +1,26 @@
 import "@babylonjs/core/Debug/debugLayer";
 import "@babylonjs/inspector";
-import { Engine, Scene, Vector3, HemisphericLight, SceneLoader, CubeTexture, Mesh, UniversalCamera } from "@babylonjs/core";
+import { Engine, Scene, Vector3, HemisphericLight, SceneLoader, CubeTexture, Mesh, UniversalCamera, PhysicsAggregate, PhysicsShapeType, HavokPlugin, MeshBuilder, PhysicsBody, PhysicsMotionType, PhysicsShapeConvexHull, Quaternion, PhysicsShapeBox } from "@babylonjs/core";
+import { HavokPhysicsWithBindings }  from "@babylonjs/havok"
 import { CustomLoadingScreen } from "./LoadingUI";
-import { CharacterInput } from "./InputController";
-import { Character } from "./CharacterController";
+import { CharacterInput } from "./CharacterInput";
+import { Character } from "./Character";
+import { ShowRoom } from "./ShowRoom";
+
+declare function HavokPhysics(): any;
 
 class App {
 
     private _scene: Scene;
     private _canvas: HTMLCanvasElement;
     private _engine: Engine;
+    private _havok!: HavokPhysicsWithBindings;
+
 
     private _camera: UniversalCamera;
     private _light: HemisphericLight;
 
-    private _showroom;
+    private _showroom: ShowRoom;
     private _character: Character;
     private _characterInput: CharacterInput;
 
@@ -33,20 +39,25 @@ class App {
         // show loading screen
         this._engine.displayLoadingUI();
 
-        this._scene = new Scene(this._engine);
+        console.log("here");
 
+        this._createScene();
         this._setCamera();
         this._setLight();
-        
-        this._characterInput = new CharacterInput(this._scene);
 
-        // load assets.
-        this._loadAssets().then((done) => {
-            if(done) {
-                // hide the loading screen when assets are done loading.
-                this._engine.hideLoadingUI();
+        this._enablePhysics().then((enabled) => {
+            if(enabled) {
+                // load assets.
+                this._loadAssets().then(() => {
+                    // hide the loading screen when assets are done loading.
+                    this._engine.hideLoadingUI();
+                });
+            } else {
+                console.log("No Physics Engine available.")
             }
         });
+        
+        this._characterInput = new CharacterInput(this._scene);
 
         this._showInspector();
 
@@ -86,6 +97,10 @@ class App {
         return this._canvas;
     }
 
+    private async _createScene(): Promise<void>{
+        this._scene = new Scene(this._engine);
+    }
+
     private _setCamera(): void {
         // selected universal cam because I want to move around the showroom.
         this._camera = new UniversalCamera("camera", new Vector3(-1.50,7.0,10), this._scene);
@@ -96,29 +111,68 @@ class App {
 
     private _setLight(): void {
         this._light = new HemisphericLight("light1", new Vector3(0, 1, 0), this._scene);
+        this._light.intensity = 0.7;
     }
 
-    private async _loadAssets() : Promise<boolean> {
+    private async _enablePhysics() : Promise<boolean> {
+
+        this._havok = await HavokPhysics();
+
+        // initialize plugin
+        const havokPlugin = new HavokPlugin(true, this._havok);
+
+        this._scene.collisionsEnabled = true;
+
+        // enable physics in the scene with a gravity
+        return await this._scene.enablePhysics(new Vector3(0, -9.8, 0), havokPlugin);
+    }
+
+    private async _loadAssets() {
+
+        // create ground.
+        this._createGround();
 
         // load showroom.
-        this._showroom = await this._loadShowRoom();
+        this._loadShowRoom();
 
         // load character.
         this._loadCharacter();
   
         // show sky
-        var skyTexture = new CubeTexture("./textures/skybox/", this._scene);
-        this._scene.createDefaultSkybox(skyTexture, true, 1000);
-
-        return true;
+        this._loadSky();
     }
 
-    private async _loadShowRoom(): Promise<any> {
+    private async _createGround() {
+        const size: number = 40;
+        var ground = Mesh.CreateGround("ground", size, size, 2, this._scene);
+        ground.position = Vector3.Zero();
+       
+        var groundShape = new PhysicsShapeBox(
+            Vector3.Zero(),
+            Quaternion.Identity(),
+            new  Vector3(size, 0.1, size),
+            this._scene
+        );
 
-        const result = await SceneLoader.ImportMeshAsync("", "./models/atoms/", "classic-room.glb", this._scene);
-        result.meshes[0].checkCollisions = true;
+        var groundBody = new PhysicsBody(ground,  PhysicsMotionType.STATIC, false, this._scene);
+        var groundMaterial = {friction: 0.2, restitution: 0.3};
 
-        return result.meshes[0];
+        groundShape.material = (groundMaterial);
+        groundBody.shape = (groundShape);
+        groundBody.setMassProperties ({
+            mass: 0,
+        });
+
+        ground.receiveShadows = true;
+    }
+
+    private async _loadShowRoom() {
+
+        const res = await SceneLoader.ImportMeshAsync("", "./models/atoms/", "classic-room.glb", this._scene);
+
+        const showroom: Mesh = res.meshes[0] as Mesh;
+        
+        this._showroom = new ShowRoom(this._scene, showroom);
     }
 
     private async _loadCharacter() {
@@ -129,6 +183,11 @@ class App {
 
         this._character = new Character(this._scene, this._camera, avatar, 
             this._scene.getAnimationGroupByName("Walk"), this._characterInput);
+    }
+
+    private async _loadSky() {
+        var skyTexture = new CubeTexture("./textures/skybox/", this._scene);
+        this._scene.createDefaultSkybox(skyTexture, true, 1000);
     }
 
     private _showInspector(): void {
