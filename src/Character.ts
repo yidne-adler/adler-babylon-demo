@@ -1,7 +1,10 @@
-import { AnimationGroup, Mesh, PhysicsAggregate, PhysicsMotionType, PhysicsShapeType, Scene, UniversalCamera, Vector3 } from "@babylonjs/core";
+import { AbstractMesh, AnimationGroup, Mesh, PhysicsAggregate, PhysicsMotionType, PhysicsShapeType, Scene, SceneLoader, UniversalCamera, Vector3 } from "@babylonjs/core";
 import { CharacterInput } from "./CharacterInput";
 
 export class Character {
+
+    private _scene: Scene;
+    private _camera: UniversalCamera;
 
     private _input: CharacterInput;
 
@@ -9,32 +12,39 @@ export class Character {
     private _backwardsWalkingSpeed = 0.01;
     private _rotationSpeed = 0.05;
 
-    private _mesh: Mesh;
-    private _aggregate: PhysicsAggregate;
+    private _root: AbstractMesh;
     private _walkAnim: AnimationGroup;
 
-    constructor(scene: Scene, camera: UniversalCamera, mesh: Mesh, walkAnim: AnimationGroup, input: CharacterInput){
+    constructor(scene: Scene, camera: UniversalCamera, input: CharacterInput){
+        this._scene = scene;
         this._input = input;
+        this._camera = camera;
+    }
 
-        this._mesh = mesh;
-        this._mesh.checkCollisions = true;
-        this._mesh.scaling.setAll(0.8);
+    public async load(): Promise<void> {
+
+        const res = await SceneLoader.ImportMeshAsync("", "./models/", "character.glb", this._scene);
+
+        this._root = res.meshes[0];
+        this._root.checkCollisions = true;
+        this._root.scaling.setAll(0.8);
 
         // lock the camera to the character.
-        camera.lockedTarget = this._mesh;
+        this._camera.lockedTarget = this._root;
 
-        this._walkAnim = walkAnim;
+        this._walkAnim = this._scene.getAnimationGroupByName("Walk");
 
-        // Create a static box shape.
-        this._aggregate = new PhysicsAggregate(mesh, 
-            PhysicsShapeType.CONVEX_HULL, 
-            { mass: 1, startAsleep: true, restitution: 0.75 }, 
-            scene
-        );
+        this._root.getChildMeshes().forEach(m => {
+            var agg = new PhysicsAggregate(m, 
+                PhysicsShapeType.CONVEX_HULL, 
+                { mass: 0, startAsleep: true, restitution: 0.75 }, 
+                this._scene
+            );
 
-        this._aggregate.body.setMotionType(PhysicsMotionType.DYNAMIC);
+            agg.body.setMotionType(PhysicsMotionType.ANIMATED);
+        });
 
-        scene.onBeforeRenderObservable.add(() => {
+        this._scene.onBeforeRenderObservable.add(() => {
             this._controlMovement();
         });
     }
@@ -42,19 +52,19 @@ export class Character {
     private _controlMovement() {
 
         if (this._input.inputMap["w"]) {
-            this._mesh.moveWithCollisions(this._mesh.forward.scaleInPlace(this._walkingSpeed));
+            this._root.moveWithCollisions(this._root.forward.scaleInPlace(this._walkingSpeed));
         }
 
         if (this._input.inputMap["s"]) {
-            this._mesh.moveWithCollisions(this._mesh.forward.scaleInPlace(-this._backwardsWalkingSpeed));
+            this._root.moveWithCollisions(this._root.forward.scaleInPlace(-this._backwardsWalkingSpeed));
         }
 
         if (this._input.inputMap["a"]) {
-            this._mesh.rotate(Vector3.Up(), -this._rotationSpeed);
+            this._root.rotate(Vector3.Up(), -this._rotationSpeed);
         }
         
         if (this._input.inputMap["d"]) {
-            this._mesh.rotate(Vector3.Up(), this._rotationSpeed);
+            this._root.rotate(Vector3.Up(), this._rotationSpeed);
         }
         
         if (this._input.inputMap["b"]) {}

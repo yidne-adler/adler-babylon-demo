@@ -16,14 +16,12 @@ class App {
     private _engine: Engine;
     private _havok!: HavokPhysicsWithBindings;
 
-
     private _camera: UniversalCamera;
     private _light: HemisphericLight;
 
     private _showroom: ShowRoom;
     private _character: Character;
     private _characterInput: CharacterInput;
-
 
     constructor() {
         // create canvas.
@@ -38,8 +36,6 @@ class App {
 
         // show loading screen
         this._engine.displayLoadingUI();
-
-        console.log("here");
 
         this._createScene();
         this._setCamera();
@@ -130,13 +126,15 @@ class App {
     private async _loadAssets() {
 
         // create ground.
-        this._createGround();
+        // this._createGround();
 
         // load showroom.
-        this._loadShowRoom();
+        this._showroom = new ShowRoom(this._scene);
+        this._showroom.load();
 
         // load character.
-        this._loadCharacter();
+        this._character = new Character(this._scene, this._camera, this._characterInput);
+        this._character.load();
   
         // show sky
         this._loadSky();
@@ -164,25 +162,6 @@ class App {
         });
 
         ground.receiveShadows = true;
-    }
-
-    private async _loadShowRoom() {
-
-        const res = await SceneLoader.ImportMeshAsync("", "./models/atoms/", "classic-room.glb", this._scene);
-
-        const showroom: Mesh = res.meshes[0] as Mesh;
-        
-        this._showroom = new ShowRoom(this._scene, showroom);
-    }
-
-    private async _loadCharacter() {
-
-        const res = await SceneLoader.ImportMeshAsync("", "./models/", "character.glb", this._scene);
-
-        const avatar: Mesh = res.meshes[0] as Mesh;
-
-        this._character = new Character(this._scene, this._camera, avatar, 
-            this._scene.getAnimationGroupByName("Walk"), this._characterInput);
     }
 
     private async _loadSky() {
