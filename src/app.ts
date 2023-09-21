@@ -1,6 +1,6 @@
 import "@babylonjs/core/Debug/debugLayer";
 import "@babylonjs/inspector";
-import { Engine, Scene, Vector3, HemisphericLight, SceneLoader, CubeTexture, Mesh, UniversalCamera, PhysicsAggregate, PhysicsShapeType, HavokPlugin, MeshBuilder, PhysicsBody, PhysicsMotionType, PhysicsShapeConvexHull, Quaternion, PhysicsShapeBox } from "@babylonjs/core";
+import { Engine, Scene, Vector3, HemisphericLight, CubeTexture, Mesh, UniversalCamera, HavokPlugin, PhysicsBody, PhysicsMotionType, Quaternion, PhysicsShapeBox } from "@babylonjs/core";
 import { HavokPhysicsWithBindings }  from "@babylonjs/havok"
 import { CustomLoadingScreen } from "./LoadingUI";
 import { CharacterInput } from "./CharacterInput";

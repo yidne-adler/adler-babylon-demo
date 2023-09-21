@@ -1,4 +1,4 @@
-import { AbstractMesh, AnimationGroup, Mesh, PhysicsAggregate, PhysicsMotionType, PhysicsShapeType, Scene, SceneLoader, UniversalCamera, Vector3 } from "@babylonjs/core";
+import { AbstractMesh, AnimationGroup, PhysicsAggregate, PhysicsMotionType, PhysicsShapeType, Scene, SceneLoader, UniversalCamera, Vector3 } from "@babylonjs/core";
 import { CharacterInput } from "./CharacterInput";
 
 export class Character {
@@ -13,6 +13,7 @@ export class Character {
     private _rotationSpeed = 0.05;
 
     private _root: AbstractMesh;
+    private _aggregate: PhysicsAggregate;
     private _walkAnim: AnimationGroup;
 
     constructor(scene: Scene, camera: UniversalCamera, input: CharacterInput){
@@ -28,21 +29,20 @@ export class Character {
         this._root = res.meshes[0];
         this._root.checkCollisions = true;
         this._root.scaling.setAll(0.8);
+        this._root.rotation = new Vector3(0, 0, 0);
 
         // lock the camera to the character.
         this._camera.lockedTarget = this._root;
 
         this._walkAnim = this._scene.getAnimationGroupByName("Walk");
 
-        this._root.getChildMeshes().forEach(m => {
-            var agg = new PhysicsAggregate(m, 
-                PhysicsShapeType.CONVEX_HULL, 
-                { mass: 0, startAsleep: true, restitution: 0.75 }, 
-                this._scene
-            );
+        this._aggregate = new PhysicsAggregate(this._root, 
+            PhysicsShapeType.CONTAINER, 
+            { mass: 10, startAsleep: true, restitution: 0.75 }, 
+            this._scene
+        );
 
-            agg.body.setMotionType(PhysicsMotionType.ANIMATED);
-        });
+        this._aggregate.body.setMotionType(PhysicsMotionType.STATIC)
 
         this._scene.onBeforeRenderObservable.add(() => {
             this._controlMovement();
