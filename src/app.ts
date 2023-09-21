@@ -1,6 +1,6 @@
 import "@babylonjs/core/Debug/debugLayer";
 import "@babylonjs/inspector";
-import { Engine, Scene, Vector3, HemisphericLight, CubeTexture, Mesh, UniversalCamera, HavokPlugin, PhysicsBody, PhysicsMotionType, Quaternion, PhysicsShapeBox } from "@babylonjs/core";
+import { Engine, Scene, Vector3, HemisphericLight, CubeTexture, Mesh, UniversalCamera, HavokPlugin, PhysicsBody, PhysicsMotionType, Quaternion, PhysicsShapeBox, PhysicsAggregate } from "@babylonjs/core";
 import { HavokPhysicsWithBindings }  from "@babylonjs/havok"
 import { CustomLoadingScreen } from "./LoadingUI";
 import { CharacterInput } from "./CharacterInput";
@@ -126,7 +126,7 @@ class App {
     private async _loadAssets() {
 
         // create ground.
-        // this._createGround();
+        this._createGround();
 
         // load showroom.
         this._showroom = new ShowRoom(this._scene);
@@ -141,7 +141,7 @@ class App {
     }
 
     private async _createGround() {
-        const size: number = 40;
+        const size: number = 10;
         var ground = Mesh.CreateGround("ground", size, size, 2, this._scene);
         ground.position = Vector3.Zero();
        
@@ -152,14 +152,9 @@ class App {
             this._scene
         );
 
-        var groundBody = new PhysicsBody(ground,  PhysicsMotionType.STATIC, false, this._scene);
-        var groundMaterial = {friction: 0.2, restitution: 0.3};
-
-        groundShape.material = (groundMaterial);
-        groundBody.shape = (groundShape);
-        groundBody.setMassProperties ({
-            mass: 0,
-        });
+        var groundAggregate = new PhysicsAggregate(ground, groundShape, 
+            {mass: 0, friction: 0.2, restitution: 0.3}, this._scene);
+        groundAggregate.body.setMotionType(PhysicsMotionType.STATIC);
 
         ground.receiveShadows = true;
     }

@@ -1,4 +1,4 @@
-import { AbstractMesh, AnimationGroup, PhysicsAggregate, PhysicsMotionType, PhysicsShapeType, Scene, SceneLoader, UniversalCamera, Vector3 } from "@babylonjs/core";
+import { AbstractMesh, AnimationGroup, PhysicsAggregate, PhysicsMotionType, PhysicsShapeType, Quaternion, Scene, SceneLoader, UniversalCamera, Vector3 } from "@babylonjs/core";
 import { CharacterInput } from "./CharacterInput";
 
 export class Character {
@@ -41,7 +41,7 @@ export class Character {
             { mass: 10, startAsleep: true, restitution: 0.75 }, 
             this._scene
         );
-
+        // this._aggregate.body.disablePreStep = false;
         this._aggregate.body.setMotionType(PhysicsMotionType.STATIC)
 
         this._scene.onBeforeRenderObservable.add(() => {
@@ -52,6 +52,7 @@ export class Character {
     private _controlMovement() {
 
         if (this._input.inputMap["w"]) {
+            // this._aggregate.body.applyForce()
             this._root.moveWithCollisions(this._root.forward.scaleInPlace(this._walkingSpeed));
         }
 
@@ -60,7 +61,8 @@ export class Character {
         }
 
         if (this._input.inputMap["a"]) {
-            this._root.rotate(Vector3.Up(), -this._rotationSpeed);
+            this._root.rotationQuaternion = Quaternion.FromEulerAngles(0,1,0);
+            // this._root.rotate(Vector3.Up(), -this._rotationSpeed);
         }
         
         if (this._input.inputMap["d"]) {
