@@ -1,4 +1,4 @@
-import { AbstractMesh, AnimationGroup, PhysicsAggregate, PhysicsMotionType, PhysicsShapeType, Quaternion, Scene, SceneLoader, UniversalCamera, Vector3 } from "@babylonjs/core";
+import { AbstractMesh, AnimationGroup, Axis, MeshBuilder, PhysicsAggregate, PhysicsMotionType, PhysicsShapeType, Scene, SceneLoader, UniversalCamera, Vector3 } from "@babylonjs/core";
 import { CharacterInput } from "./CharacterInput";
 
 export class Character {
@@ -8,9 +8,9 @@ export class Character {
 
     private _input: CharacterInput;
 
-    private _walkingSpeed = 0.1;
-    private _backwardsWalkingSpeed = 0.01;
-    private _rotationSpeed = 0.05;
+    private _walkingSpeed: number = 1;
+    private _rotationSpeed: number = 0.5;
+    private _dampling: number = 500;
 
     private _root: AbstractMesh;
     private _aggregate: PhysicsAggregate;
@@ -29,6 +29,7 @@ export class Character {
         this._root = res.meshes[0];
         this._root.checkCollisions = true;
         this._root.scaling.setAll(0.8);
+        this._root.position = new Vector3(0, -1, 0);
         this._root.rotation = new Vector3(0, 0, 0);
 
         // lock the camera to the character.
@@ -36,13 +37,19 @@ export class Character {
 
         this._walkAnim = this._scene.getAnimationGroupByName("Walk");
 
-        this._aggregate = new PhysicsAggregate(this._root, 
-            PhysicsShapeType.CONTAINER, 
-            { mass: 10, startAsleep: true, restitution: 0.75 }, 
+        // collision box.
+        // TODO: change it to capsule.
+        var box = MeshBuilder.CreateBox("character_cb", {size: 1, height: 2, width: 1}, this._scene);
+        box.addChild(this._root);
+        box.visibility = 0.0;
+        box.position.y = 1;
+
+        this._aggregate = new PhysicsAggregate(box,
+            PhysicsShapeType.BOX,
+            { mass: 10, restitution: 0.01 },
             this._scene
         );
-        // this._aggregate.body.disablePreStep = false;
-        this._aggregate.body.setMotionType(PhysicsMotionType.STATIC)
+        this._aggregate.body.setMotionType(PhysicsMotionType.DYNAMIC);
 
         this._scene.onBeforeRenderObservable.add(() => {
             this._controlMovement();
@@ -52,30 +59,37 @@ export class Character {
     private _controlMovement() {
 
         if (this._input.inputMap["w"]) {
-            // this._aggregate.body.applyForce()
-            this._root.moveWithCollisions(this._root.forward.scaleInPlace(this._walkingSpeed));
+            var frontVector = this._aggregate.transformNode.getDirection(Axis.Z);
+            this._aggregate.body.setLinearVelocity(frontVector.scale(this._walkingSpeed));
         }
 
         if (this._input.inputMap["s"]) {
-            this._root.moveWithCollisions(this._root.forward.scaleInPlace(-this._backwardsWalkingSpeed));
+            var frontVector = this._aggregate.transformNode.getDirection(Axis.Z);
+            this._aggregate.body.setLinearVelocity(frontVector.scale(-this._walkingSpeed));
         }
 
         if (this._input.inputMap["a"]) {
-            this._root.rotationQuaternion = Quaternion.FromEulerAngles(0,1,0);
-            // this._root.rotate(Vector3.Up(), -this._rotationSpeed);
+            var rotationAxis = new Vector3(0, -1, 0);
+            this._aggregate.body.setAngularDamping(this._dampling);
+            this._aggregate.body.setAngularVelocity(rotationAxis.scale(this._rotationSpeed));
         }
         
         if (this._input.inputMap["d"]) {
-            this._root.rotate(Vector3.Up(), this._rotationSpeed);
+            var rotationAxis = new Vector3(0, 1, 0);
+            this._aggregate.body.setAngularDamping(this._dampling);
+            this._aggregate.body.setAngularVelocity(rotationAxis.scale(this._rotationSpeed));
         }
-        
-        if (this._input.inputMap["b"]) {}
 
         if (this._input.keydown && this._walkAnim) {
             // Walk
             this._walkAnim.start(true, 1.0, this._walkAnim.from, this._walkAnim.to, false);
         } else {
             this._walkAnim.stop();
+        }
+
+        if(this._input.rotating == false) {
+            var rotationAxis = new Vector3(0, 0, 0);
+            this._aggregate.body.setAngularVelocity(rotationAxis.scale(0));
         }
     }
 }

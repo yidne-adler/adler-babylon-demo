@@ -4,6 +4,7 @@ export class CharacterInput {
 
     public inputMap: any;
     public keydown: boolean = false;
+    public rotating: boolean = false;
 
     constructor(scene: Scene){
 
@@ -24,10 +25,16 @@ export class CharacterInput {
         );
 
         scene.onBeforeRenderObservable.add(() => {
-            if (this.inputMap["w"] || this.inputMap["s"] || this.inputMap["a"] || this.inputMap["d"]){
+            if (this.inputMap["w"] || this.inputMap["s"] || this.inputMap["a"] || this.inputMap["d"]) {
                 this.keydown = true;
             } else {
                 this.keydown = false;
+            }
+
+            if (this.inputMap["a"] || this.inputMap["d"]) {
+                this.rotating = true;
+            } else {
+                this.rotating = false;
             }
         })
     }

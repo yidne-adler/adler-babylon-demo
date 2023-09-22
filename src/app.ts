@@ -1,6 +1,6 @@
 import "@babylonjs/core/Debug/debugLayer";
 import "@babylonjs/inspector";
-import { Engine, Scene, Vector3, HemisphericLight, CubeTexture, Mesh, UniversalCamera, HavokPlugin, PhysicsBody, PhysicsMotionType, Quaternion, PhysicsShapeBox, PhysicsAggregate } from "@babylonjs/core";
+import { Engine, Scene, Vector3, HemisphericLight, CubeTexture, HavokPlugin, PhysicsMotionType, PhysicsAggregate, PhysicsShapeType, UniversalCamera, MeshBuilder } from "@babylonjs/core";
 import { HavokPhysicsWithBindings }  from "@babylonjs/havok"
 import { CustomLoadingScreen } from "./LoadingUI";
 import { CharacterInput } from "./CharacterInput";
@@ -44,10 +44,10 @@ class App {
         this._enablePhysics().then((enabled) => {
             if(enabled) {
                 // load assets.
-                this._loadAssets().then(() => {
-                    // hide the loading screen when assets are done loading.
-                    this._engine.hideLoadingUI();
-                });
+                this._loadAssets();
+
+                // hide the loading screen when assets are done loading.
+                this._engine.hideLoadingUI();
             } else {
                 console.log("No Physics Engine available.")
             }
@@ -70,7 +70,6 @@ class App {
     
     private _createCanvas(): HTMLCanvasElement {
 
-        //Commented out for development
         document.documentElement.style["overflow"] = "hidden";
         document.documentElement.style.overflow = "hidden";
         document.documentElement.style.width = "100%";
@@ -93,7 +92,7 @@ class App {
         return this._canvas;
     }
 
-    private async _createScene(): Promise<void>{
+    private _createScene(): void {
         this._scene = new Scene(this._engine);
     }
 
@@ -103,6 +102,10 @@ class App {
         this._camera.target = new Vector3(-1.5, 4, 3.6);
         this._camera.rotation = new Vector3(25/180 * Math.PI, Math.PI, 0);
         this._camera.attachControl(this._canvas);
+        this._camera.minZ = 0.2;
+
+        // This attaches the camera to the canvas
+        this._camera.attachControl(this._canvas, true);
     }
 
     private _setLight(): void {
@@ -110,7 +113,7 @@ class App {
         this._light.intensity = 0.7;
     }
 
-    private async _enablePhysics() : Promise<boolean> {
+    private async _enablePhysics(): Promise<boolean> {
 
         this._havok = await HavokPhysics();
 
@@ -123,10 +126,13 @@ class App {
         return await this._scene.enablePhysics(new Vector3(0, -9.8, 0), havokPlugin);
     }
 
-    private async _loadAssets() {
+    private _loadAssets(): void {
 
         // create ground.
         this._createGround();
+
+        // show sky
+        this._loadSky();
 
         // load showroom.
         this._showroom = new ShowRoom(this._scene);
@@ -135,33 +141,19 @@ class App {
         // load character.
         this._character = new Character(this._scene, this._camera, this._characterInput);
         this._character.load();
-  
-        // show sky
-        this._loadSky();
     }
 
     private async _createGround() {
-        const size: number = 10;
-        var ground = Mesh.CreateGround("ground", size, size, 2, this._scene);
-        ground.position = Vector3.Zero();
-       
-        var groundShape = new PhysicsShapeBox(
-            Vector3.Zero(),
-            Quaternion.Identity(),
-            new  Vector3(size, 0.1, size),
-            this._scene
-        );
+        var ground = MeshBuilder.CreateGround("ground", {width: 10, height: 10}, this._scene);
 
-        var groundAggregate = new PhysicsAggregate(ground, groundShape, 
-            {mass: 0, friction: 0.2, restitution: 0.3}, this._scene);
+        var groundAggregate = new PhysicsAggregate(ground, PhysicsShapeType.BOX,
+            { mass: 0}, this._scene);
         groundAggregate.body.setMotionType(PhysicsMotionType.STATIC);
-
-        ground.receiveShadows = true;
     }
 
     private async _loadSky() {
         var skyTexture = new CubeTexture("./textures/skybox/", this._scene);
-        this._scene.createDefaultSkybox(skyTexture, true, 1000);
+        this._scene.createDefaultSkybox(skyTexture, true);
     }
 
     private _showInspector(): void {
